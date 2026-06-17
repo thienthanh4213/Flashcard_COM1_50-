@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Const Site">
+<meta name="theme-color" content="#1D9E75">
+<link id="pwa-icon" rel="apple-touch-icon" href="">
+<title>COM1_50 – Flashcard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#1e293b}
+.topbar{background:#fff;border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:100;display:flex;align-items:center;padding:0 12px}
+.topbar-title{flex:1;font-size:14px;font-weight:700;color:#334155;padding:13px 0;text-align:center}
+#pwa-add-btn{display:none;padding:5px 12px;border-radius:20px;border:1.5px solid #1D9E75;background:#f0fdf4;color:#065f46;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.wrap{max-width:480px;margin:0 auto;padding:16px 14px}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.ftab{padding:5px 13px;border-radius:20px;border:1.5px solid #cbd5e1;background:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s}
+.ftab.on{background:#d1fae5;color:#065f46;border-color:#6ee7b7}
+.meta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:#64748b}
+.round-badge{padding:3px 12px;border-radius:20px;background:#fef9c3;border:1.5px solid #fde68a;color:#92400e;font-size:11px;font-weight:700}
+.round-badge.retry{background:#fce7f3;border-color:#fbcfe8;color:#9d174d}
+.progress-wrap{height:5px;background:#e2e8f0;border-radius:3px;margin-bottom:14px}
+.progress-bar{height:100%;border-radius:3px;background:#1D9E75;transition:width .3s}
+/* SCENE / CARD — skill spec */
+.scene{width:100%;max-width:400px;margin:0 auto;perspective:800px;cursor:pointer;margin-bottom:16px}
+.card{width:100%;position:relative;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.4,0,.2,1)}
+.card.flipped{transform:rotateY(180deg)}
+.face{position:relative;width:100%;min-height:200px;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.front{background:#fff;border:2px solid #e2e8f0}
+.back{position:absolute;top:0;left:0;height:100%;background:linear-gradient(135deg,#1D9E75,#0d7a5a);color:#fff;transform:rotateY(180deg);width:100%}
+.fc-word{font-size:22px;font-weight:700;text-align:center;color:#1e293b;margin-bottom:4px;line-height:1.3}
+.fc-pos{font-size:12px;color:#1D9E75;font-weight:600;margin-bottom:2px}
+.fc-ipa{font-size:12px;color:#94a3b8;margin-bottom:10px}
+.fc-note{font-size:11px;color:#f97316;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:4px 10px;margin-bottom:8px;text-align:center;line-height:1.5}
+.audio-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:8px}
+.audio-btn:hover{background:#dbeafe}
+.audio-btn.playing{background:#0ea5e9;color:#fff;border-color:#0284c7}
+.hint-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 14px;border-radius:20px;border:1.5px dashed #fbbf24;background:#fffbeb;color:#92400e;font-size:11px;font-weight:600;cursor:pointer}
+.hint-btn:hover{background:#fef3c7}
+/* SVG hint — skill CSS spec */
+.svg-hint{margin-top:8px;display:none;border-radius:10px;overflow:hidden;width:100%;max-width:220px}
+.svg-hint svg{width:100%;height:auto;display:block}
+/* BACK face */
+.back-label{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.back-vi{font-size:22px;font-weight:700;text-align:center;line-height:1.4;margin-bottom:6px}
+.back-en{font-size:13px;opacity:.8;text-align:center}
+.back-note{font-size:11px;background:rgba(255,255,255,.18);border-radius:8px;padding:5px 10px;margin-top:8px;text-align:center;line-height:1.55;max-width:100%}
+/* BUTTONS */
+.btn-row{display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+.btn{padding:9px 20px;border-radius:12px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:hover{background:#f8fafc}
+.btn-forget{border-color:#fca5a5;color:#b91c1c;background:#fff5f5}
+.btn-forget:hover{background:#fee2e2}
+.btn-remember{border-color:#6ee7b7;color:#065f46;background:#f0fdf4}
+.btn-remember:hover{background:#dcfce7}
+/* CHIPS */
+.chips-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+.chip{font-size:11px;padding:4px 12px;border-radius:20px;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;font-weight:600}
+.chip-g{background:#dcfce7;border-color:#86efac;color:#166534}
+.chip-r{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+.chip-b{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
+.shuffle-btn{display:block;margin:0 auto;background:none;border:none;font-size:12px;color:#94a3b8;cursor:pointer;padding:4px 8px}
+/* FORGET PANEL */
+.panel{background:#fff;border-radius:16px;padding:18px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.panel-title{font-size:15px;font-weight:700;color:#9d174d;margin-bottom:8px}
+.panel-sub{font-size:12px;color:#64748b;margin-bottom:14px}
+.forget-list{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px}
+.forget-tag{padding:4px 12px;border-radius:20px;background:#fce7f3;border:1px solid #fbcfe8;color:#9d174d;font-size:12px;font-weight:600}
+.retry-btn{width:100%;padding:11px;border-radius:12px;border:none;background:#be185d;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+/* DONE PANEL */
+.done-panel{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:2px solid #86efac;border-radius:16px;padding:28px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.done-panel h3{font-size:18px;font-weight:700;color:#166534;margin-bottom:8px}
+.done-panel p{font-size:13px;color:#4d7c0f;margin-bottom:16px}
+/* PWA banners */
+#install-banner{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #1D9E75;padding:12px 16px;z-index:999;box-shadow:0 -4px 16px rgba(0,0,0,.1)}
+.banner-inner{display:flex;align-items:center;gap:12px;max-width:480px;margin:0 auto}
+.banner-icon{width:42px;height:42px;border-radius:10px;background:#1D9E75;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.banner-text{flex:1}
+.banner-title{font-size:13px;font-weight:700;color:#1e293b}
+.banner-sub{font-size:11px;color:#64748b}
+.install-btn{padding:7px 14px;border-radius:10px;border:none;background:#1D9E75;color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+.dismiss-btn{padding:7px 10px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;color:#94a3b8;font-size:12px;cursor:pointer}
+#ios-guide{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #0891b2;padding:16px;z-index:999;box-shadow:0 -4px 16px rgba(0,0,0,.1)}
+.ios-inner{max-width:480px;margin:0 auto}
+.ios-title{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.ios-steps{display:flex;flex-direction:column;gap:8px}
+.ios-step{display:flex;align-items:center;gap:10px;font-size:13px;color:#334155}
+.ios-num{width:24px;height:24px;border-radius:50%;background:#0891b2;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-title">🏗️ COM1_50 – Flashcard</div>
+  <button id="pwa-add-btn" onclick="pwaTrigger()">📲 Cài App</button>
+</div>
+
+<div id="install-banner">
+  <div class="banner-inner">
+    <div class="banner-icon">🏗️</div>
+    <div class="banner-text">
+      <div class="banner-title">Cài COM1_50 Flashcard</div>
+      <div class="banner-sub">Dùng offline, không cần mạng</div>
+    </div>
+    <button class="install-btn" onclick="doInstall()">Cài ngay</button>
+    <button class="dismiss-btn" onclick="dismissBanner()">✕</button>
+  </div>
+</div>
+
+<div id="ios-guide">
+  <div class="ios-inner">
+    <div class="ios-title">
+      <span>📲 Thêm vào màn hình chính</span>
+      <button onclick="document.getElementById('ios-guide').style.display='none'" style="background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer">✕</button>
+    </div>
+    <div class="ios-steps">
+      <div class="ios-step"><div class="ios-num">1</div><span>Nhấn <strong>Chia sẻ ⎙</strong> ở thanh dưới Safari</span></div>
+      <div class="ios-step"><div class="ios-num">2</div><span>Chọn <strong>"Thêm vào Màn hình chính"</strong></span></div>
+      <div class="ios-step"><div class="ios-num">3</div><span>Nhấn <strong>"Thêm"</strong> → App xuất hiện trên Home 🎉</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="font-size:13px;color:#64748b">Tổng: <strong id="total-count">0</strong> thẻ</span>
+    <div id="round-badge" class="round-badge">Vòng 1</div>
+  </div>
+
+  <div class="filter-row" id="filter-row">
+    <button class="ftab on" onclick="setFilter('all',this)">Tất cả</button>
+    <button class="ftab" onclick="setFilter('building',this)">🏗️ Building</button>
+    <button class="ftab" onclick="setFilter('neighbourhood',this)">🏘️ Neighbourhood</button>
+    <button class="ftab" onclick="setFilter('feelings',this)">😊 Feelings</button>
+    <button class="ftab" onclick="setFilter('finance',this)">💰 Finance</button>
+    <button class="ftab" onclick="setFilter('grammar',this)">📐 Ngữ pháp</button>
+    <button class="ftab" onclick="setFilter('phrases',this)">💬 Phrases</button>
+  </div>
+
+  <div class="progress-wrap"><div class="progress-bar" id="prog-bar" style="width:0%"></div></div>
+  <div class="meta-row">
+    <span id="card-counter">0 / 0</span>
+    <span id="group-badge" style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:#f1f5f9">-</span>
+  </div>
+
+  <!-- Card area -->
+  <div id="card-area">
+    <div class="scene" onclick="flipCard()">
+      <div class="card" id="the-card">
+        <!-- FRONT -->
+        <div class="face front" id="face-front">
+          <div class="fc-word" id="fc-word">-</div>
+          <div class="fc-pos" id="fc-pos">-</div>
+          <div class="fc-ipa" id="fc-ipa">-</div>
+          <div class="fc-note" id="fc-note" style="display:none"></div>
+          <button class="audio-btn" id="audio-btn" onclick="playAudio(event)">🔊 Nghe phát âm</button>
+          <button class="hint-btn" id="hint-btn" onclick="showHint(event)">🖼️ Xem hình gợi ý</button>
+          <div class="svg-hint" id="svg-hint"></div>
+        </div>
+        <!-- BACK -->
+        <div class="face back" id="face-back">
+          <div class="back-label">Nghĩa tiếng Việt</div>
+          <div class="back-vi" id="back-vi">-</div>
+          <div class="back-en" id="back-en">-</div>
+          <div class="back-note" id="back-note" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="prevCard()">← Prev</button>
+      <button class="btn btn-forget" onclick="markForget()">😕 Quên</button>
+      <button class="btn btn-remember" onclick="markRemember()">✓ Nhớ</button>
+      <button class="btn" onclick="nextCard()">Next →</button>
+    </div>
+
+    <div class="chips-row">
+      <span class="chip chip-g">Nhớ: <strong id="count-r">0</strong></span>
+      <span class="chip chip-r">Quên: <strong id="count-f">0</strong></span>
+      <span class="chip chip-b">Còn lại: <strong id="count-l">0</strong></span>
+    </div>
+    <button class="shuffle-btn" onclick="shuffleDeck()">🔀 Shuffle</button>
+  </div>
+
+  <!-- Forget panel -->
+  <div class="panel" id="forget-panel" style="display:none">
+    <div class="panel-title">🔁 Ôn lại từ chưa nhớ</div>
+    <div class="panel-sub">Vòng này xong! Các từ <strong>Quên</strong>:</div>
+    <div class="forget-list" id="forget-list"></div>
+    <button class="retry-btn" onclick="startRetry()">Ôn lại ngay →</button>
+  </div>
+
+  <!-- Done panel -->
+  <div class="done-panel" id="done-panel" style="display:none">
+    <div style="font-size:44px;margin-bottom:10px">🏆</div>
+    <h3>Xuất sắc! Bạn đã nhớ tất cả!</h3>
+    <p>Hoàn thành tất cả thẻ trong bộ từ vựng.</p>
+    <button class="btn btn-remember" style="margin:0 auto;display:block" onclick="resetAll()">🔄 Làm lại từ đầu</button>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+// [word, pos, ipa, vietnamese, group, note_front?, note_back?]
+const VOCAB = [
+  // BUILDING
+  ["oversee","v.","/ˌoʊvərˈsiː/","giám sát (tổng thể)","building","= supervise / watch over","Oversee = giám sát từ cấp quản lý\nTo oversee the workers on site."],
+  ["supervise","v.","/ˈsuːpərvaɪz/","giám sát trực tiếp","building","≈ oversee — but more hands-on","Supervise = giám sát trực tiếp\nTo make sure they follow the process."],
+  ["observe","v.","/əbˈzɜːrv/","quan sát, theo dõi","building","≈ watch carefully (không can thiệp)","Observe = chỉ quan sát, không điều khiển\nI'm observing the workers today."],
+  ["floor / storey","n.","/flɔːr/ /ˈstɔːri/","tầng (nhà)","building","floor (AmE) = storey (BrE)","How many floors does it have?\nThere are more than 20 floors / storeys."],
+  ["approximate","adj.","/əˈprɒksɪmət/","xấp xỉ, khoảng chừng","building","≈ roughly, about","Can you give me an approximate number?\n≈ approximately 20 floors."],
+  ["approximately","adv.","/əˈprɒksɪmətli/","khoảng, xấp xỉ","building","≈ about / roughly","There are approximately 20 floors.\nThat's approximately 5 hundred thousand."],
+  ["construction site","n. phr.","/kənˈstrʌkʃən saɪt/","công trường xây dựng","building","","Workers are busy at the construction site."],
+  ["progress","n.","/ˈprɒɡres/","tiến trình, độ tiến triển","building","≠ process (quy trình)","Progress = mức độ hoàn thành (How far?)\n'How is the progress?' = Tiến độ thế nào?"],
+  ["process","n.","/ˈprɒses/","quy trình, các bước","building","≠ progress (tiến trình)","Process = các bước thực hiện (How?)\n'Follow the process' = Làm theo quy trình."],
+  ["modern","adj.","/ˈmɒdərn/","hiện đại","building","","Is the office modern?\nThe building looks very modern."],
+  // NEIGHBOURHOOD
+  ["crowded","adj.","/ˈkraʊdɪd/","đông đúc","neighbourhood","↔ quiet / peaceful","Is your neighborhood crowded?\nI prefer a quiet place over a crowded one."],
+  ["quiet","adj.","/ˈkwaɪət/","yên tĩnh","neighbourhood","= peaceful ↔ noisy, crowded","I prefer a quiet / peaceful place.\nQuiet = yên tĩnh ↔ noisy = ồn ào."],
+  ["peaceful","adj.","/ˈpiːsfəl/","yên bình, thanh thản","neighbourhood","= quiet","The countryside is more peaceful.\nI love the peaceful atmosphere here."],
+  ["neighborhood","n.","/ˈneɪbərˌhʊd/","khu phố, khu vực","neighbourhood","AmE: neighborhood / BrE: neighbourhood","My neighborhood is very friendly."],
+  ["depend on","v. phr.","/dɪˈpend ɒn/","phụ thuộc vào","neighbourhood","'It depends on...' — cụm cố định","It depends on my mood!\nDo you prefer quiet or crowded? — It depends!"],
+  // FEELINGS
+  ["mood","n.","/muːd/","tâm trạng","feelings","","It depends on my mood!\nI'm in a good / bad mood today."],
+  ["enjoy","v.","/ɪnˈdʒɔɪ/","tận hưởng","feelings","enjoy + N / enjoy + V-ing","Enjoy the moment!\nI enjoy listening to music."],
+  ["stressed","adj.","/strest/","căng thẳng","feelings","","If I feel stressed, I like quiet places.\nI'm so stressed today."],
+  ["happy","adj.","/ˈhæpi/","vui, hạnh phúc","feelings","","If I feel happy, I like crowded places.\nYou look happy today! 😊"],
+  // FINANCE
+  ["utility fees","n. phr.","/juːˈtɪlɪti fiːz/","tiền phí tiện ích","finance","= electricity + water + gas bills","How much do you pay for utility fees?\nMore than 500,000 / 1 million VND per month."],
+  ["electricity","n.","/ɪˌlekˈtrɪsɪti/","điện","finance","electricity bill = hóa đơn tiền điện","The electricity bill is very high this month."],
+  ["water","n.","/ˈwɔːtər/","nước","finance","water bill = hóa đơn tiền nước","Don't forget to pay the water bill."],
+  ["gas","n.","/ɡæs/","gas","finance","gas bill = hóa đơn tiền gas","We use gas for cooking."],
+  ["affordable","adj.","/əˈfɔːrdəbl/","phải chăng, vừa túi tiền","finance","= reasonable","The rent is very affordable here.\naffordable = reasonable = phải chăng."],
+  ["reasonable","adj.","/ˈriːzənəbl/","hợp lý, phải chăng","finance","= affordable","The price is very reasonable.\nNot too expensive, not too cheap."],
+  // GRAMMAR
+  ["choose → chose","v.","/tʃuːz/ → /tʃoʊz/","chọn (HTĐ → Quá khứ)","grammar","choose /uː/ → chose /oʊ/ — phát âm đổi!","I will choose a quiet apartment. (HTĐ)\nI chose a quiet apartment last year. (QK)"],
+  ["choice","n.","/tʃɔɪs/","sự lựa chọn","grammar","make a choice = choose","What's your choice?\nmake a choice = choose (cách diễn đạt khác nhau)."],
+  ["make a choice","v. phr.","/meɪk ə tʃɔɪs/","đưa ra lựa chọn","grammar","= choose","I made a choice yesterday.\nmake a choice = choose — cùng nghĩa!"],
+  ["however","adv.","/haʊˈevər/","tuy nhiên","grammar","= But (formal hơn)","I like the city. However, it's too crowded.\nHowever đứng đầu câu, dùng dấu phẩy sau."],
+  ["twenty-first (21st)","ord.","/ˌtwenti ˈfɜːrst/","thứ hai mươi mốt","grammar","Số thứ tự: -st / -nd / -rd / -th","The twenty-first floor (21st floor)\n1st 2nd 3rd 4th ... 20th 21st 31st"],
+  ["thirty-first (31st)","ord.","/ˌθɜːrti ˈfɜːrst/","thứ ba mươi mốt","grammar","31st — ordinal number","The meeting is on March the thirty-first.\n= March 31st."],
+  // PHRASES
+  ["it works for me","phrase","/ɪt wɜːrks fər miː/","tôi đồng ý / không vấn đề gì","phrases","= It's ok with me. = That's fine with me.","A: Let's meet at 3pm.\nB: It works for me! 👍"],
+  ["both of us","phrase","/boʊθ əv ʌs/","cả hai chúng ta","phrases","","Both of us are living far from each other.\nBoth of us prefer quiet places."],
+  ["hang out","v. phr.","/hæŋ aʊt/","đi chơi, tụ tập (không chính thức)","phrases","","Let's hang out this weekend!\nLast week we hung out at the mall."],
+  ["destination","n.","/ˌdestɪˈneɪʃən/","điểm đến","phrases","","Before we go to the destination...\nWhat's our destination today?"],
+  ["in between","prep. phr.","/ɪn bɪˈtwiːn/","ở giữa (hai nơi)","phrases","","Let's choose a location in between us.\nSomewhere between your place and mine."],
+  ["arrange in order","v. phr.","/əˈreɪndʒ ɪn ˈɔːrdər/","sắp xếp theo thứ tự","phrases","","Please arrange these words in order.\nArrange from 1st to last."],
+  ["bless you","phrase","/bles juː/","chúc lành (khi ai hắt hơi)","phrases","nói khi ai đó hắt hơi 🤧","A: Achoo! 🤧\nB: Bless you! 🙏"],
+  ["wait a minute","phrase","/weɪt ə ˈmɪnɪt/","đợi một chút","phrases","= hang on / hold on","Wait a minute, I'll be right there.\n≈ Hold on / One second, please."],
+  ["invite","v.","/ɪnˈvaɪt/","mời","phrases","invite sb to + place/event","Last week I invited her to hang out.\nShe invited us to her new apartment."],
+  ["visit","v.","/ˈvɪzɪt/","thăm, đến thăm","phrases","visit ≠ hang out (formal hơn)","I visited my friend last week.\nvisit = có mục đích rõ ràng hơn hang out."],
+];
+
+// ── SVG ILLUSTRATIONS ─────────────────────────────────────────────────────────
+const ILLUS = {
+"oversee":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fff7ed"/><text x="100" y="40" text-anchor="middle" font-size="30">👁️</text><text x="55" y="76" text-anchor="middle" font-size="22">👷</text><text x="100" y="76" text-anchor="middle" font-size="22">👷</text><text x="145" y="76" text-anchor="middle" font-size="22">👷</text><text x="100" y="100" text-anchor="middle" font-size="11" fill="#c2410c" font-weight="600">Oversee the workers</text></svg>`,
+"supervise":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#ecfdf5"/><text x="100" y="44" text-anchor="middle" font-size="30">🧑‍💼</text><text x="100" y="72" text-anchor="middle" font-size="11" fill="#065f46" font-weight="600">Supervise = hands-on</text><text x="100" y="88" text-anchor="middle" font-size="10" fill="#86efac">Make sure they follow the process</text></svg>`,
+"observe":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#eff6ff"/><text x="100" y="44" text-anchor="middle" font-size="30">🔭</text><text x="100" y="72" text-anchor="middle" font-size="12" fill="#1d4ed8" font-weight="600">Observe = watch carefully</text><text x="100" y="88" text-anchor="middle" font-size="10" fill="#93c5fd">No interference</text></svg>`,
+"floor / storey":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#eff6ff"/><rect x="65" y="14" width="70" height="10" rx="2" fill="#93c5fd"/><text x="143" y="22" font-size="8" fill="#1d4ed8" font-weight="700">20F</text><rect x="65" y="28" width="70" height="10" rx="2" fill="#bfdbfe"/><rect x="65" y="42" width="70" height="10" rx="2" fill="#bfdbfe"/><rect x="65" y="56" width="70" height="10" rx="2" fill="#bfdbfe"/><rect x="65" y="70" width="70" height="10" rx="2" fill="#bfdbfe"/><text x="100" y="98" text-anchor="middle" font-size="10" fill="#1d4ed8" font-weight="600">floor (AmE) = storey (BrE)</text></svg>`,
+"progress":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fef9c3"/><text x="100" y="30" text-anchor="middle" font-size="10" fill="#713f12" font-weight="700">PROGRESS — tiến trình</text><rect x="20" y="40" width="160" height="14" rx="7" fill="#fde68a"/><rect x="20" y="40" width="112" height="14" rx="7" fill="#f59e0b"/><text x="132" y="52" font-size="10" fill="#fff" font-weight="700">70%</text><text x="100" y="74" text-anchor="middle" font-size="11" fill="#854d0e">How far? → Progress</text><text x="100" y="90" text-anchor="middle" font-size="10" fill="#d97706">≠ Process (quy trình)</text></svg>`,
+"process":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#f0f9ff"/><text x="33" y="48" text-anchor="middle" font-size="18">1️⃣</text><text x="68" y="48" text-anchor="middle" font-size="14">→</text><text x="100" y="48" text-anchor="middle" font-size="18">2️⃣</text><text x="132" y="48" text-anchor="middle" font-size="14">→</text><text x="167" y="48" text-anchor="middle" font-size="18">3️⃣</text><text x="100" y="72" text-anchor="middle" font-size="11" fill="#0369a1" font-weight="600">PROCESS — quy trình</text><text x="100" y="88" text-anchor="middle" font-size="10" fill="#7dd3fc">How? → Follow the process</text></svg>`,
+"modern":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#eff6ff"/><rect x="22" y="36" width="28" height="64" rx="2" fill="#bfdbfe"/><rect x="58" y="20" width="34" height="80" rx="2" fill="#60a5fa"/><rect x="100" y="28" width="30" height="72" rx="2" fill="#3b82f6"/><rect x="138" y="36" width="28" height="64" rx="2" fill="#bfdbfe"/><rect x="0" y="98" width="200" height="12" fill="#93c5fd"/><text x="100" y="108" text-anchor="middle" font-size="10" fill="#1d4ed8" font-weight="600">Modern city skyline</text></svg>`,
+"crowded":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fff1f2"/><text x="22" y="50" font-size="16">🧍</text><text x="44" y="50" font-size="16">🧍</text><text x="66" y="50" font-size="16">🧍</text><text x="88" y="50" font-size="16">🧍</text><text x="110" y="50" font-size="16">🧍</text><text x="132" y="50" font-size="16">🧍</text><text x="154" y="50" font-size="16">🧍</text><text x="33" y="72" font-size="16">🧍</text><text x="55" y="72" font-size="16">🧍</text><text x="77" y="72" font-size="16">🧍</text><text x="99" y="72" font-size="16">🧍</text><text x="121" y="72" font-size="16">🧍</text><text x="143" y="72" font-size="16">🧍</text><text x="100" y="96" text-anchor="middle" font-size="10" fill="#be123c" font-weight="600">Crowded ↔ Quiet / Peaceful</text></svg>`,
+"quiet":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#f0fdf4"/><text x="100" y="48" text-anchor="middle" font-size="34">🌿</text><text x="100" y="74" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">Quiet = Peaceful</text><text x="100" y="92" text-anchor="middle" font-size="10" fill="#86efac">yên tĩnh ↔ noisy / crowded</text></svg>`,
+"peaceful":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#ecfdf5"/><text x="100" y="46" text-anchor="middle" font-size="32">🕊️</text><text x="100" y="72" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">Peaceful = Quiet</text><text x="100" y="90" text-anchor="middle" font-size="10" fill="#86efac">yên bình, thanh thản</text></svg>`,
+"mood":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fef9c3"/><text x="38" y="52" text-anchor="middle" font-size="26">😊</text><text x="100" y="52" text-anchor="middle" font-size="26">😔</text><text x="162" y="52" text-anchor="middle" font-size="26">😤</text><text x="100" y="78" text-anchor="middle" font-size="11" fill="#713f12" font-weight="600">It depends on my mood!</text><text x="100" y="96" text-anchor="middle" font-size="10" fill="#fde68a">good mood / bad mood</text></svg>`,
+"utility fees":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fefce8"/><text x="38" y="50" text-anchor="middle" font-size="26">⚡</text><text x="100" y="50" text-anchor="middle" font-size="26">💧</text><text x="162" y="50" text-anchor="middle" font-size="26">🔥</text><text x="38" y="68" text-anchor="middle" font-size="9" fill="#854d0e">electricity</text><text x="100" y="68" text-anchor="middle" font-size="9" fill="#854d0e">water</text><text x="162" y="68" text-anchor="middle" font-size="9" fill="#854d0e">gas</text><text x="100" y="88" text-anchor="middle" font-size="11" fill="#854d0e" font-weight="600">Utility fees / bills</text></svg>`,
+"affordable":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#ecfdf5"/><text x="100" y="46" text-anchor="middle" font-size="32">💚</text><text x="100" y="70" text-anchor="middle" font-size="11" fill="#065f46" font-weight="600">affordable = reasonable</text><text x="100" y="86" text-anchor="middle" font-size="10" fill="#86efac">phải chăng — not too expensive!</text></svg>`,
+"choose → chose":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#f0f9ff"/><text x="52" y="40" text-anchor="middle" font-size="13" fill="#0369a1" font-weight="700">choose</text><text x="52" y="55" text-anchor="middle" font-size="10" fill="#7dd3fc">present /uː/</text><text x="100" y="50" text-anchor="middle" font-size="22">→</text><text x="150" y="40" text-anchor="middle" font-size="13" fill="#0369a1" font-weight="700">chose</text><text x="150" y="55" text-anchor="middle" font-size="10" fill="#7dd3fc">past /oʊ/</text><text x="100" y="78" text-anchor="middle" font-size="10" fill="#0369a1">I will choose... / I chose...</text><text x="100" y="96" text-anchor="middle" font-size="10" fill="#bfdbfe">Pronunciation changes!</text></svg>`,
+"however":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fdf4ff"/><text x="50" y="46" text-anchor="middle" font-size="22">☀️</text><text x="100" y="38" text-anchor="middle" font-size="14" fill="#7e22ce" font-weight="700">However,</text><text x="150" y="46" text-anchor="middle" font-size="22">🌧️</text><text x="100" y="64" text-anchor="middle" font-size="10" fill="#7e22ce">I like sun. However, I need rain.</text><text x="100" y="80" text-anchor="middle" font-size="10" fill="#c084fc">= But (more formal)</text><text x="100" y="96" text-anchor="middle" font-size="10" fill="#c084fc">However + comma at start of sentence</text></svg>`,
+"it works for me":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#f0fdf4"/><text x="100" y="44" text-anchor="middle" font-size="30">👍</text><text x="100" y="66" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">It works for me!</text><text x="100" y="82" text-anchor="middle" font-size="10" fill="#86efac">= It's ok with me.</text><text x="100" y="96" text-anchor="middle" font-size="10" fill="#86efac">= That's fine with me.</text></svg>`,
+"hang out":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fdf4ff"/><text x="65" y="50" text-anchor="middle" font-size="26">🧑</text><text x="100" y="48" text-anchor="middle" font-size="18">🤝</text><text x="135" y="50" text-anchor="middle" font-size="26">🧑</text><text x="100" y="76" text-anchor="middle" font-size="12" fill="#7e22ce" font-weight="600">Let's hang out!</text><text x="100" y="94" text-anchor="middle" font-size="10" fill="#c084fc">casual — no specific plan needed</text></svg>`,
+"destination":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fff7ed"/><text x="100" y="46" text-anchor="middle" font-size="32">📍</text><text x="100" y="72" text-anchor="middle" font-size="12" fill="#c2410c" font-weight="600">What's our destination?</text><text x="100" y="90" text-anchor="middle" font-size="10" fill="#fdba74">điểm đến — where we're going</text></svg>`,
+"in between":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#fef9c3"/><text x="25" y="50" text-anchor="middle" font-size="20">📍</text><text x="100" y="50" text-anchor="middle" font-size="20">⭐</text><text x="175" y="50" text-anchor="middle" font-size="20">📍</text><text x="25" y="66" text-anchor="middle" font-size="8" fill="#713f12">You</text><text x="100" y="66" text-anchor="middle" font-size="8" fill="#713f12">Meet here</text><text x="175" y="66" text-anchor="middle" font-size="8" fill="#713f12">Me</text><text x="100" y="88" text-anchor="middle" font-size="10" fill="#854d0e" font-weight="600">Choose a location in between</text></svg>`,
+"bless you":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#ecfdf5"/><text x="70" y="50" text-anchor="middle" font-size="28">🤧</text><text x="138" y="42" text-anchor="middle" font-size="20">💬</text><text x="155" y="38" font-size="9" fill="#065f46" font-weight="700">Bless</text><text x="155" y="50" font-size="9" fill="#065f46" font-weight="700">you!</text><text x="100" y="78" text-anchor="middle" font-size="11" fill="#065f46" font-weight="600">Achoo! → Bless you! 🙏</text><text x="100" y="96" text-anchor="middle" font-size="10" fill="#86efac">say when someone sneezes</text></svg>`,
+"twenty-first (21st)":`<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#eff6ff"/><text x="100" y="42" text-anchor="middle" font-size="28" fill="#1d4ed8" font-weight="800">21st</text><text x="100" y="62" text-anchor="middle" font-size="12" fill="#1d4ed8">twenty-first</text><text x="100" y="80" text-anchor="middle" font-size="9" fill="#93c5fd">1st 2nd 3rd 4th ... 20th 21st 31st</text><text x="100" y="96" text-anchor="middle" font-size="9" fill="#bfdbfe">-st / -nd / -rd / -th</text></svg>`,
+};
+
+// ── GROUPS ────────────────────────────────────────────────────────────────────
+const GRP_LABEL = {building:"🏗️ Building",neighbourhood:"🏘️ Neighbourhood",feelings:"😊 Feelings",finance:"💰 Finance",grammar:"📐 Ngữ pháp",phrases:"💬 Phrases"};
+const GRP_COLOR = {building:"#ffedd5|#9a3412",neighbourhood:"#dbeafe|#1e40af",feelings:"#fdf4ff|#7e22ce",finance:"#dcfce7|#166534",grammar:"#fef3c7|#92400e",phrases:"#ede9fe|#4c1d95"};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let deck = [], idx = 0, remembered = new Set(), forgotten = new Set();
+let currentFilter = 'all', round = 1, mode = 'normal'; // mode: normal | retry
+
+function buildDeck(f) {
+  return f === 'all' ? [...VOCAB] : VOCAB.filter(v => v[4] === f);
+}
+
+function setFilter(f, btn) {
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  currentFilter = f;
+  deck = buildDeck(f);
+  remembered.clear(); forgotten.clear(); idx = 0; round = 1; mode = 'normal';
+  updateRoundBadge();
+  showCardArea();
+  unflip();
+  render();
+}
+
+function shuffleDeck() {
+  const active = getActive();
+  for (let i = active.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [active[i], active[j]] = [active[j], active[i]];
+  }
+  // Re-map deck to put active first then remembered
+  deck = [...active, ...deck.filter((_, i) => remembered.has(i))];
+  remembered.clear(); idx = 0;
+  unflip(); render();
+}
+
+function getActive() {
+  return deck.filter((_, i) => !remembered.has(i));
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render() {
+  const active = getActive();
+  const remaining = active.length;
+  document.getElementById('total-count').textContent = deck.length;
+
+  if (remaining === 0) {
+    const forgottenWords = deck.filter((_, i) => forgotten.has(i));
+    if (forgottenWords.length > 0) {
+      showForgetPanel(forgottenWords);
+    } else {
+      showDonePanel();
+    }
+    return;
+  }
+
+  const card = active[idx % remaining];
+  const pos = (idx % remaining) + 1;
+
+  // Front
+  document.getElementById('fc-word').textContent = card[0];
+  document.getElementById('fc-pos').textContent = card[1];
+  document.getElementById('fc-ipa').textContent = card[2];
+
+  // Note front (index 5)
+  const noteEl = document.getElementById('fc-note');
+  if (card[5]) { noteEl.textContent = card[5]; noteEl.style.display = 'block'; }
+  else { noteEl.style.display = 'none'; }
+
+  // Back
+  document.getElementById('back-vi').textContent = card[3];
+  document.getElementById('back-en').textContent = card[0];
+
+  // Note back (index 6)
+  const noteBack = document.getElementById('back-note');
+  if (card[6]) { noteBack.innerHTML = card[6].replace(/\n/g, '<br>'); noteBack.style.display = 'block'; }
+  else { noteBack.style.display = 'none'; }
+
+  // Group badge
+  const grp = card[4];
+  const col = (GRP_COLOR[grp] || '#f1f5f9|#475569').split('|');
+  const gb = document.getElementById('group-badge');
+  gb.textContent = GRP_LABEL[grp] || grp;
+  gb.style.background = col[0]; gb.style.color = col[1];
+
+  // Progress
+  document.getElementById('card-counter').textContent = pos + ' / ' + remaining;
+  document.getElementById('prog-bar').style.width = Math.round(pos / remaining * 100) + '%';
+
+  // Chips
+  document.getElementById('count-r').textContent = remembered.size;
+  document.getElementById('count-f').textContent = forgotten.size;
+  document.getElementById('count-l').textContent = remaining;
+
+  // Reset hint
+  const hint = document.getElementById('svg-hint');
+  hint.style.display = 'none'; hint.innerHTML = '';
+  document.getElementById('hint-btn').style.display = 'inline-flex';
+
+  // Reset audio btn
+  const ab = document.getElementById('audio-btn');
+  ab.textContent = '🔊 Nghe phát âm'; ab.classList.remove('playing');
+}
+
+// ── CARD ACTIONS ──────────────────────────────────────────────────────────────
+function flipCard() {
+  document.getElementById('the-card').classList.toggle('flipped');
+}
+
+function unflip() {
+  document.getElementById('the-card').classList.remove('flipped');
+}
+
+function prevCard() {
+  const r = getActive().length;
+  if (!r) return;
+  idx = (idx - 1 + r) % r;
+  unflip(); render();
+}
+
+function nextCard() {
+  const r = getActive().length;
+  if (!r) return;
+  idx = (idx + 1) % r;
+  unflip(); render();
+}
+
+function markRemember() {
+  const active = getActive();
+  if (!active.length) return;
+  const card = active[idx % active.length];
+  const ri = deck.indexOf(card);
+  remembered.add(ri); forgotten.delete(ri);
+  const newActive = getActive();
+  if (newActive.length > 0) idx = idx % newActive.length;
+  unflip(); render();
+}
+
+function markForget() {
+  const active = getActive();
+  if (!active.length) return;
+  const card = active[idx % active.length];
+  const ri = deck.indexOf(card);
+  forgotten.add(ri);
+  const newActive = getActive();
+  if (newActive.length > 0) idx = (idx + 1) % newActive.length;
+  unflip(); render();
+}
+
+// ── AUDIO ─────────────────────────────────────────────────────────────────────
+function playAudio(e) {
+  e.stopPropagation();
+  const raw = document.getElementById('fc-word').textContent;
+  // clean: "choose → chose" → "choose"
+  const word = raw.split('→')[0].split('(')[0].trim();
+  const btn = document.getElementById('audio-btn');
+  btn.textContent = '⏸ Phát...'; btn.classList.add('playing');
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US'; u.rate = 0.85;
+  u.onend = u.onerror = () => { btn.textContent = '🔊 Nghe phát âm'; btn.classList.remove('playing'); };
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+// ── HINT ──────────────────────────────────────────────────────────────────────
+function showHint(e) {
+  e.stopPropagation();
+  const active = getActive();
+  if (!active.length) return;
+  const card = active[idx % active.length];
+  const key = card[0].toLowerCase();
+  const svg = ILLUS[key] || ILLUS[card[0]];
+  const hint = document.getElementById('svg-hint');
+  document.getElementById('hint-btn').style.display = 'none';
+  hint.style.display = 'block';
+  hint.innerHTML = svg || `<svg viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="110" rx="10" fill="#f8fafc"/><text x="100" y="48" text-anchor="middle" font-size="30">💡</text><text x="100" y="74" text-anchor="middle" font-size="13" fill="#475569" font-weight="600">${card[0]}</text><text x="100" y="94" text-anchor="middle" font-size="11" fill="#94a3b8">${card[3]}</text></svg>`;
+}
+
+// ── FORGET / DONE PANELS ──────────────────────────────────────────────────────
+function showCardArea() {
+  document.getElementById('card-area').style.display = 'block';
+  document.getElementById('forget-panel').style.display = 'none';
+  document.getElementById('done-panel').style.display = 'none';
+}
+
+function showForgetPanel(words) {
+  document.getElementById('card-area').style.display = 'none';
+  document.getElementById('done-panel').style.display = 'none';
+  document.getElementById('forget-panel').style.display = 'block';
+  document.getElementById('count-r').textContent = remembered.size;
+  document.getElementById('count-f').textContent = forgotten.size;
+  document.getElementById('count-l').textContent = 0;
+  document.getElementById('forget-list').innerHTML = words.map(w => `<span class="forget-tag">${w[0]}</span>`).join('');
+}
+
+function showDonePanel() {
+  document.getElementById('card-area').style.display = 'none';
+  document.getElementById('forget-panel').style.display = 'none';
+  document.getElementById('done-panel').style.display = 'block';
+}
+
+function startRetry() {
+  deck = deck.filter((_, i) => forgotten.has(i));
+  // shuffle retry deck
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  remembered.clear(); forgotten.clear(); idx = 0; round++; mode = 'retry';
+  updateRoundBadge();
+  showCardArea(); unflip(); render();
+}
+
+function resetAll() {
+  deck = buildDeck(currentFilter);
+  remembered.clear(); forgotten.clear(); idx = 0; round = 1; mode = 'normal';
+  updateRoundBadge();
+  showCardArea(); unflip(); render();
+}
+
+function updateRoundBadge() {
+  const b = document.getElementById('round-badge');
+  if (mode === 'retry') {
+    b.textContent = '🔁 Ôn lại: Vòng ' + round;
+    b.className = 'round-badge retry';
+  } else {
+    b.textContent = 'Vòng ' + round;
+    b.className = 'round-badge';
+  }
+}
+
+// ── PWA ───────────────────────────────────────────────────────────────────────
+const PWA_NAME = 'COM1_50 – Flashcard';
+const PWA_SHORT = 'Const FC';
+const PWA_EMOJI = '🏗️';
+const PWA_COLOR = '#1D9E75';
+
+let deferredPrompt = null;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+function genIcon(size) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" rx="${size * 0.22}" fill="${PWA_COLOR}"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="${size * 0.45}">${PWA_EMOJI}</text><text x="50%" y="80%" text-anchor="middle" font-size="${size * 0.13}" font-family="sans-serif" fill="rgba(255,255,255,0.9)" font-weight="bold">${PWA_SHORT}</text></svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+function injectManifest() {
+  const m = { name: PWA_NAME, short_name: PWA_SHORT, display: 'standalone', background_color: '#f0f4f8', theme_color: PWA_COLOR, orientation: 'portrait', icons: [{ src: genIcon(192), sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' }, { src: genIcon(512), sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }] };
+  const blob = new Blob([JSON.stringify(m)], { type: 'application/json' });
+  const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+  document.getElementById('pwa-icon').href = genIcon(180);
+}
+
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  const code = `const C='v1';self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['./'])));self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim();});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('./'))));});`;
+  const blob = new Blob([code], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+
+function pwaTrigger() {
+  if (isIOS && !isStandalone) { document.getElementById('ios-guide').style.display = 'block'; }
+  else if (deferredPrompt) { document.getElementById('install-banner').style.display = 'block'; }
+}
+
+function doInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') { document.getElementById('install-banner').style.display = 'none'; document.getElementById('pwa-add-btn').style.display = 'none'; }
+    deferredPrompt = null;
+  });
+}
+
+function dismissBanner() {
+  document.getElementById('install-banner').style.display = 'none';
+  sessionStorage.setItem('pwa-dismissed', '1');
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  if (!isStandalone && !sessionStorage.getItem('pwa-dismissed')) {
+    document.getElementById('install-banner').style.display = 'block';
+  }
+  document.getElementById('pwa-add-btn').style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').style.display = 'none';
+  document.getElementById('pwa-add-btn').style.display = 'none';
+  deferredPrompt = null;
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+if (!isStandalone) {
+  injectManifest();
+  registerSW();
+  document.getElementById('pwa-add-btn').style.display = 'block';
+  if (isIOS && !sessionStorage.getItem('ios-shown')) {
+    setTimeout(() => {
+      document.getElementById('ios-guide').style.display = 'block';
+      sessionStorage.setItem('ios-shown', '1');
+    }, 3000);
+  }
+}
+
+deck = buildDeck('all');
+render();
+</script>
+</body>
+</html>
